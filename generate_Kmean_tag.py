@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # @Date    : 2017-03-30 14:08:16
-# @Author  : YZiyi Zhao
+# @Author  : Ziyi Zhao
 # @Version : 1.0
 
 import os
