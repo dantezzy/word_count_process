@@ -315,14 +315,14 @@ def generate_tfidf(train_dataset):
     #print(texts_without_digit)
 
 # remove word tense
-# 	print('Process tense and plural')
-# 	texts_without_tense = []
-# 	for text_without_digit in texts_without_digit:
-# 		temp = []
-# 		for word in text_without_digit:
-# 			temp.append(PorterStemmer().stem(word.decode('utf-8')))
-# 		texts_without_tense.append(temp)
-# 	#print(texts_without_tense)
+	print('Process tense and plural')
+	texts_without_tense = []
+	for text_without_digit in texts_without_digit:
+		temp = []
+		for word in text_without_digit:
+			temp.append(PorterStemmer().stem(word.decode('utf-8')))
+		texts_without_tense.append(temp)
+	#print(texts_without_tense)
 
 # prepare dataset for TF-IDF processing
 	
