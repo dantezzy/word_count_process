@@ -4,7 +4,7 @@
 # @Author  : Ziyi Zhao
 # @Version : 1.0
 # 1.0 : process test dataset
-#       add each docuemnt from test dataset into 7000 train dataset
+#       add each document from test dataset into 7000 train dataset
 #       implement word pair based TF-IDF processing
 #       set default score as 0.01
 #       use "aaa" be the index to combine a word pair
@@ -39,28 +39,39 @@ def load_pickle(path):
 
 ###############################################################################################################################################
 # combine word pair and save it into a temporal file
-def save_into_temporal_file(train_dataset_list):
+def save_into_temporal_file(train_dataset_list,test_document):
 
 	temp_dataset_for_tfidf = []
+# process train dataset
 	for document in train_dataset_list:
-		temp_str = ''
+		train_temp_str = ''
 		for index in xrange(0,len(document)-1):
 			# print document[index]
 			temp_combination = document[index][0] + "aaa" + document[index][1]
-			temp_str += temp_combination
-			temp_str += ' '
-		temp_str += document[len(document)-1][0] + "aaa" + document[len(document)-1][1]
-		temp_dataset_for_tfidf.append(temp_str)
+			train_temp_str += temp_combination
+			train_temp_str += ' '
+		train_temp_str += document[len(document)-1][0] + "aaa" + document[len(document)-1][1]
+		temp_dataset_for_tfidf.append(train_temp_str)
 
-	thefile = open('./temporal_train_file.txt','w')
-	for item in temp_dataset_for_tfidf:
-		thefile.write("%s\n" % item)
+# process test document and add it into train dataset
+	test_temp_str = ''
+	for index in xrange(0,len(test_document)-1):
+		# print document[index]
+		temp_combination = test_document[index][0] + "aaa" + test_document[index][1]
+		test_temp_str += temp_combination
+		test_temp_str += ' '
+	test_temp_str += test_document[len(test_document)-1][0] + "aaa" + test_document[len(test_document)-1][1]
+	temp_dataset_for_tfidf.append(test_temp_str)
+
+	# thefile = open('./temporal_train_file.txt','w')
+	# for item in temp_dataset_for_tfidf:
+	# 	thefile.write("%s\n" % item)
 
 	return temp_dataset_for_tfidf
 
 ###############################################################################################################################################
 # tfidf processing
-def tfidf_process(temp_dataset_for_tfidf,train_dataset_list):
+def tfidf_process(temp_dataset_for_tfidf,test_document):
 
 # TF-IDF process
 	vectorizer = CountVectorizer(decode_error="replace")
@@ -78,19 +89,17 @@ def tfidf_process(temp_dataset_for_tfidf,train_dataset_list):
 
 # remove the word with low TF-IDF score
 	texts_after_tfidf = list()
-	print('Remove word based on TF-IDF')
-	doc_count = 0
-	for document in train_dataset_list:
-		print "Process DOC:",doc_count
-		# print document
-		temp_in_tfidf = list()
-		for word_pair in document:
-			temp_combination = word_pair[0] + "aaa" + word_pair[1]
-			if check_tfidf(doc_count,word_dict,weight,temp_combination,0.1):
-				temp_in_tfidf.append(word_pair)
-			# print temp_in_tfidf
-		texts_after_tfidf.append(temp_in_tfidf)
-		doc_count += 1
+	# print('Remove word based on TF-IDF')
+
+	# print "Process DOC:",len(temp_dataset_for_tfidf)
+	# print document
+	temp_in_tfidf = list()
+	for word_pair in test_document:
+		temp_combination = word_pair[0] + "aaa" + word_pair[1]
+		if check_tfidf(len(temp_dataset_for_tfidf)-1,word_dict,weight,temp_combination,0.1):
+			temp_in_tfidf.append(word_pair)
+		# print temp_in_tfidf
+	texts_after_tfidf.append(temp_in_tfidf)
 
 	return texts_after_tfidf
 
@@ -109,14 +118,14 @@ def check_tfidf(currentdoc,worddict,tfidfdict,currentword,score):
 
 ###############################################################################################################################################
 # save final document into file
-def save_into_file(texts_after_tfidf):
+def save_into_file(final_test_result):
 
-	train_dataset_file = open('./OMDB_train_dataset_with_word_pair_based_2TFIDF.txt','w')
-	for item in texts_after_tfidf:
-		train_dataset_file.write("%s\n" % item)
+	test_dataset_file = open('./OMDB_test_dataset_with_word_pair_based_2TFIDF.txt','w')
+	for item in final_test_result:
+		test_dataset_file.write("%s\n" % item)
 
-	with open('./OMDB_train_dataset_with_word_pair_based_2TFIDF.pkl','w') as f:
-	    pickle.dump(texts_after_tfidf,f)
+	with open('./OMDB_test_dataset_with_word_pair_based_2TFIDF.pkl','w') as f:
+	    pickle.dump(final_test_result,f)
 
 ###############################################################################################################################################
 # run four separate parts
@@ -126,11 +135,20 @@ def run(train_dataset_pickle_path,test_dataset_pickle_path):
 
 	test_dataset_list = load_pickle(test_dataset_pickle_path)
 
-	temp_dataset_for_tfidf = save_into_temporal_file(train_dataset_list,test_dataset_list)
+	final_test_result = list()
 
-	texts_after_tfidf = tfidf_process(temp_dataset_for_tfidf,test_dataset_list) 
+	count = 0
 
-	save_into_file(texts_after_tfidf)
+	for test_document in test_dataset_list:
+		temp_dataset_for_tfidf = save_into_temporal_file(train_dataset_list,test_document)
+		texts_after_tfidf = tfidf_process(temp_dataset_for_tfidf,test_document) 
+		final_test_result.append(texts_after_tfidf)
+		print "process document :",count
+		count += 1
+
+	print "Total size is :",len(final_test_result)
+
+	save_into_file(final_test_result)
 
 ###############################################################################################################################################
 if __name__ == '__main__':
