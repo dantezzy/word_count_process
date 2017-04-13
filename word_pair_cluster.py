@@ -88,12 +88,12 @@ def convert_dictionary_into_vector(word2vec_model,original_dictionary):
 # Kmean processing
 def kmean_cluster(word_vector_dictionary):
 
-	numberLoop = np.array([110, 120, 130, 140, 150, 160, 170, 180, 190, 199])
+	numberLoop = np.array([200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000])
 
 	np_word_vector_dictionary = np.array(word_vector_dictionary)
 	for n_clusters in numberLoop:
 		kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(np_word_vector_dictionary)
-		silhouette_avg = silhouette_score(data, kmeans.labels_)
+		silhouette_avg = silhouette_score(np_word_vector_dictionary, kmeans.labels_)
 		print('For n_clusters = {0} The average silhouette_score is : {1}'.format(n_clusters, silhouette_avg))
 
 ###############################################################################################################################################
