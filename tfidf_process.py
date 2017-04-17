@@ -58,7 +58,7 @@ def save_into_temporal_file(train_dataset_list):
 
 ###############################################################################################################################################
 # tfidf processing
-def tfidf_process(temp_dataset_for_tfidf,train_dataset_list):
+def tfidf_process(temp_dataset_for_tfidf,train_dataset_list,word2vec_model):
 
 # TF-IDF process
 	vectorizer = CountVectorizer(decode_error="replace")
@@ -84,8 +84,9 @@ def tfidf_process(temp_dataset_for_tfidf,train_dataset_list):
 		temp_in_tfidf = list()
 		for word_pair in document:
 			temp_combination = word_pair[0] + "aaa" + word_pair[1]
-			if check_tfidf(doc_count,word_dict,weight,temp_combination,0.1):
-				temp_in_tfidf.append(word_pair)
+			if word_pair[0] in word2vec_model.vocab and word_pair[1] in word2vec_model.vocab:
+				if check_tfidf(doc_count,word_dict,weight,temp_combination,0.1):
+					temp_in_tfidf.append(word_pair)
 			# print temp_in_tfidf
 		texts_after_tfidf.append(temp_in_tfidf)
 		doc_count += 1
@@ -133,14 +134,24 @@ def save_into_file(texts_after_tfidf):
 	    pickle.dump(train_dictionary_list_no_duplicate,f)
 
 ###############################################################################################################################################
+# save final document into file
+def load_pre_trained_word2vec_model(google_pre_trained_word2vec_model_path):
+	model = gensim.models.Word2Vec.load_word2vec_format(google_pre_trained_word2vec_model_path, binary=True)  
+	return model
+
+###############################################################################################################################################
 # run four separate parts
-def run(train_dataset_pickle_path):
+def run(train_dataset_pickle_path,google_pre_trained_word2vec_model_path):
 
 	train_dataset_list = load_pickle(train_dataset_pickle_path)
 
 	temp_dataset_for_tfidf = save_into_temporal_file(train_dataset_list)
 
-	texts_after_tfidf = tfidf_process(temp_dataset_for_tfidf,train_dataset_list)
+	print "Load Google pre-trained word2vec model"
+	word2vec_model = load_pre_trained_word2vec_model(google_pre_trained_word2vec_model_path)
+	print "Load finish"
+
+	texts_after_tfidf = tfidf_process(temp_dataset_for_tfidf,train_dataset_list,word2vec_model)
 
 	save_into_file(texts_after_tfidf)
 
@@ -148,5 +159,6 @@ def run(train_dataset_pickle_path):
 if __name__ == '__main__':
 
 	train_dataset_pickle_path = "../OMDB/OMDB_train_dataset_word_pair_without_stopword_with_TFIDF.pkl"
+	google_pre_trained_word2vec_model_path = "./word2vec_pre_trained_model/GoogleNews-vectors-negative300.bin"
 
-	run(train_dataset_pickle_path)
+	run(train_dataset_pickle_path,google_pre_trained_word2vec_model_path)
