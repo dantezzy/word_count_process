@@ -70,14 +70,16 @@ def train_word2vec_model():
 
 ###############################################################################################################################################
 # convert each word in original dictionary into vector format
-def convert_dictionary_into_vector(word2vec_model,original_dictionary):
+def convert_dictionary_into_vector(word2vec_model,word_pair_dictionary):
 	temp_vector_dictionary = dict()
 	temp_vector_list = list()
-	for word in original_dictionary:
-		if word in word2vec_model.vocab:
-			temp_vec = word2vec_model[word]
+	for word_pair in word_pair_dictionary:
+		if word_pair[0] in word2vec_model.vocab and word_pair[1] in word2vec_model.vocab:
+			temp_vec_1 = word2vec_model[word_pair[0]]
+			temp_vec_2 = word2vec_model[word_pair[1]]
+			temp_word_pair_combination = temp_vec_1 + temp_vec_2
 			# temp_vector_dictionary.update({word:temp_vec})
-			temp_vector_list.append(temp_vec)
+			temp_vector_list.append(temp_word_pair_combination)
 		# else:
 		# 	print word
 	# return temp_vector_dictionary
@@ -87,7 +89,7 @@ def convert_dictionary_into_vector(word2vec_model,original_dictionary):
 # Kmean processing
 def kmean_cluster(word_vector_dictionary):
 
-	numberLoop = np.array([10, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200])
+	numberLoop = np.array([10, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 400, 600, 800, 1000])
 
 	np_word_vector_dictionary = np.array(word_vector_dictionary)
 	for n_clusters in numberLoop:
@@ -99,11 +101,11 @@ def kmean_cluster(word_vector_dictionary):
 # run four separate parts
 def run(dictionary_path,google_pre_trained_word2vec_model_path):
 
-	train_dataset_set = set()
+	word_pair_dictionary = list()
 
-	train_dataset_set = from_list_into_set(train_dataset_path)
+	word_pair_dictionary = load_pickle(dictionary_path)
 
-	print "The size of the train dataset is :",len(train_dataset_set)
+	print "The size of the train dataset is :",len(word_pair_dictionary)
 
 	# test_dataset_list = load_pickle(test_dataset_pickle_path)
 
@@ -113,7 +115,7 @@ def run(dictionary_path,google_pre_trained_word2vec_model_path):
 
 	print "Convert dictionary into vector"
 	# word_vector_dictionary = dict()
-	word_vector_dictionary = convert_dictionary_into_vector(word2vec_model,train_dataset_set)
+	word_vector_dictionary = convert_dictionary_into_vector(word2vec_model,word_pair_dictionary)
 	print "Convert finish"
 
 	print "The size of the word vector dictionary is :",len(word_vector_dictionary)
