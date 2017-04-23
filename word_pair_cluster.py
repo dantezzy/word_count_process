@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 # @Date    : 2017-04-11 14:21:03
 # @Author  : Ziyi Zhao
-# @Version : 1.0
+# @Version : 1.1
+# 1.1 : add PCA decomposition
 # 1.0 : use word2vec to train the model
 #       and use the kmean to do the cluster
 
@@ -27,6 +28,9 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_samples, silhouette_score
 # PCA decomposition
 from sklearn.decomposition import PCA
+# 3D plot
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 ###############################################################################################################################################
 # load the document from pickle file
@@ -93,10 +97,38 @@ def kmean_cluster(word_vector_dictionary):
 	numberLoop = np.array([10, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200])
 
 	np_word_vector_dictionary = np.array(word_vector_dictionary)
-	for n_clusters in numberLoop:
-		kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(np_word_vector_dictionary) #n_clusters
-		silhouette_avg = silhouette_score(np_word_vector_dictionary, kmeans.labels_,sample_size=50)
-		print('For n_clusters = {0} The average silhouette_score is : {1}'.format(n_clusters, silhouette_avg))
+	pca = PCA(n_components=2)
+	newData = pca.fit_transform(np_word_vector_dictionary)
+	#print newData
+	# print len(newData)
+	x = list()
+	y = list()
+	#z = list()
+	for vector in newData:
+		x.append(vector[0]*100)
+		y.append(vector[1]*100)
+		#z.append(vector[2])
+	# x = newData[:0]
+	# y = newData[:1]
+	# z = newData[:2]
+	np_x = np.array(x)
+	np_y = np.array(y)
+	#np_z = np.array(z)
+
+	#print np_z
+
+	fig = plt.figure()
+	#ax = fig.add_subplot(111, projection='3d')
+	ax = fig.add_subplot(1, 1, 1)
+	# ax.scatter(np_x, np_y)
+	N = 50
+	colors = np.random.rand(N)
+	plt.scatter(np_x, np_y)
+	plt.show()
+	# for n_clusters in numberLoop:
+	# 	kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(np_word_vector_dictionary) #n_clusters
+	# 	silhouette_avg = silhouette_score(np_word_vector_dictionary, kmeans.labels_,sample_size=50)
+	# 	print('For n_clusters = {0} The average silhouette_score is : {1}'.format(n_clusters, silhouette_avg))
 
 ###############################################################################################################################################
 # run four separate parts
