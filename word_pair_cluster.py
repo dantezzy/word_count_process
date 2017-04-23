@@ -25,6 +25,8 @@ from time import time
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_samples, silhouette_score
+# PCA decomposition
+from sklearn.decomposition import PCA
 
 ###############################################################################################################################################
 # load the document from pickle file
@@ -88,12 +90,12 @@ def convert_dictionary_into_vector(word2vec_model,original_dictionary):
 # Kmean processing
 def kmean_cluster(word_vector_dictionary):
 
-	numberLoop = np.array([200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000])
+	numberLoop = np.array([10, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200])
 
 	np_word_vector_dictionary = np.array(word_vector_dictionary)
 	for n_clusters in numberLoop:
-		kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(np_word_vector_dictionary)
-		silhouette_avg = silhouette_score(np_word_vector_dictionary, kmeans.labels_)
+		kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(np_word_vector_dictionary) #n_clusters
+		silhouette_avg = silhouette_score(np_word_vector_dictionary, kmeans.labels_,sample_size=50)
 		print('For n_clusters = {0} The average silhouette_score is : {1}'.format(n_clusters, silhouette_avg))
 
 ###############################################################################################################################################
