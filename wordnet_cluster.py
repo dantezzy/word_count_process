@@ -6,6 +6,7 @@
 
 import os
 import pickle
+import operator
 import numpy as np
 # For wordnet process
 from nltk.corpus import wordnet as wn
@@ -59,11 +60,6 @@ def load_pre_trained_word2vec_model(google_pre_trained_word2vec_model_path):
 	return model
 
 ###############################################################################################################################################
-# save final document into file
-def train_word2vec_model():
-	pass
-
-###############################################################################################################################################
 # convert each word in original dictionary into vector format
 def convert_dictionary_into_vector(word2vec_model,original_dictionary):
 	temp_vector_dictionary = dict()
@@ -72,19 +68,85 @@ def convert_dictionary_into_vector(word2vec_model,original_dictionary):
 	for word in original_dictionary:
 		if word in word2vec_model.vocab:
 			temp_vec = word2vec_model[word]
-			# temp_vector_dictionary.update({word:temp_vec})
 			temp_vector_list.append(temp_vec)
 			temp_filter_word.add(word)
 		# else:
 		# 	print word
-	# return temp_vector_dictionary
 	return temp_vector_list,temp_filter_word
+
+
+###############################################################################################################################################
+# wordnet find path and sorting
+def wordnet_sort(word_set):
+
+	hyper = lambda s: s.hypernyms()
+	count = 0
+	# test_list = set()
+	path_dict = dict()
+
+# iterate all word set
+	for word in word_set:
+		temp_list = list()
+# generate all synsets for this word
+		temp_list = wn.synsets(word)
+# iterate all synset word in the synsets list
+		minimum_path = 9223372036854775807
+		minimum_word = ''
+		for elem in temp_list:
+# use int max initialize minimum path 
+			temp_word = str(elem)[8:-2]
+			if temp_word.find(word) != -1 and '.n.' in temp_word: # noum and contain its own meaning
+# get the path from this word to wordnet root
+				temp = list(elem.closure(hyper))
+				length = len(temp)
+				if length != 0 and length < minimum_path:
+					minimum_path = length
+					minimum_word = temp_word
+					count += 1
+		if minimum_word != '':
+			print word
+			print minimum_path
+			print "\n"
+			# test_list.add(word)
+			path_dict.update({word:minimum_path})
+
+	# print "Total number is :",len(test_list)
+	# print "Total number is :",len(path_dict)
+	sorted_x = sorted(path_dict.items(), key=operator.itemgetter(1))
+
+	return sorted_x
+
+
+###############################################################################################################################################
+# cut default number of word from path dictionary
+def dictionary_filter(sorted_x,default_number_of_word):
+
+	top_rank_list = list()
+
+	current_distance = 0
+
+	for pair in sorted_x:
+		if len(top_rank_list) < default_number_of_word :
+			top_rank_list.append(pair[0])
+		# if len(top_rank_list) == default_number_of_word and current_distance == pair[1]:
+		# 	top_rank_list.append(pair[0])
+		current_distance = pair[1]
+
+	print "The length of list :",len(top_rank_list)
+
+	return top_rank_list
 
 ###############################################################################################################################################
 # vector visualizaiton
-def visualize_vector(word_vector_dictionary):
+def visualize_vector(top_rank_list,word2vec_model):
 
-	np_word_vector_dictionary = np.array(word_vector_dictionary)
+	word_vector = list()
+
+	for word in top_rank_list:
+		temp_vec = word2vec_model[word]
+		word_vector.append(temp_vec)
+
+	np_word_vector_dictionary = np.array(word_vector)
 	pca = PCA(n_components=2)
 	newData = pca.fit_transform(np_word_vector_dictionary)
 	#print newData
@@ -113,30 +175,6 @@ def visualize_vector(word_vector_dictionary):
 	plt.show()
 
 ###############################################################################################################################################
-# vector visualizaiton
-def wordnet_sort(word_set):
-
-	hyper = lambda s: s.hypernyms()
-	count = 0
-
-	for word in word_set:
-		temp_list = list()
-		temp_list = wn.synsets(word)
-		for elem in temp_list:
-			pure = str(elem)[8:-2]
-			if word and '.n.' in pure:
-				print pure
-				# result_collection = elem	
-				temp = list(elem.closure(hyper))
-				if len(temp) != 0:
-					print pure
-					# print list(elem.closure(hyper))
-					count += 1
-
-	print "Total number is :",count
-
-
-###############################################################################################################################################
 # run four separate parts
 def run(train_dataset_path,google_pre_trained_word2vec_model_path):
 
@@ -144,9 +182,9 @@ def run(train_dataset_path,google_pre_trained_word2vec_model_path):
 
 	train_dataset_set = from_list_into_set(train_dataset_path)
 
-	print "The size of the train dataset is :",len(train_dataset_set)
+	default_number_of_word = 1000 
 
-	# test_dataset_list = load_pickle(test_dataset_pickle_path)
+	print "The size of the train dataset is :",len(train_dataset_set)
 
 	print "Load Google pre-trained word2vec model"
 	word2vec_model = load_pre_trained_word2vec_model(google_pre_trained_word2vec_model_path)
@@ -161,12 +199,18 @@ def run(train_dataset_path,google_pre_trained_word2vec_model_path):
 	print "The size of the word set is :",len(word_set)
 
 	print "Start wordnet processing"
-	wordnet_sort(word_set)
+	sorted_word_dict = wordnet_sort(word_set)
 	print "Wordnet finish"
 
-	# print "Start vector visualization"
-	# visualize_vector(word_vector_dictionary)
-	# print "Visualizaiton finish"
+	print "Get default number of word"
+	top_rank_list = dictionary_filter(sorted_word_dict,default_number_of_word)
+	print "Wordnet finish"
+
+	#print resutl_list
+
+	print "Start vector visualization"
+	visualize_vector(top_rank_list,word2vec_model)
+	print "Visualizaiton finish"
 
 ###############################################################################################################################################
 if __name__ == '__main__':
