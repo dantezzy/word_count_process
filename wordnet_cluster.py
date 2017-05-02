@@ -21,15 +21,26 @@ from sklearn.decomposition import PCA
 # 3D plot
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+# calculate distance
+from scipy.spatial import distance
 
 ###############################################################################################################################################
-# load the document from pickle file
-def load_pickle(path):
+# load the document from pickle file into list
+def load_pickle_list(path):
 
 	dataset_list = list()
 	dataset_list = pickle.load(open(path, 'rb'))
 
 	return dataset_list
+
+###############################################################################################################################################
+# load the document from pickle file into dictionary
+def load_pickle_dict(path):
+
+	dataset_dict = dict()
+	dataset_dict = pickle.load(open(path, 'rb'))
+
+	return dataset_dict
 
 ###############################################################################################################################################
 # save final document into file
@@ -68,11 +79,11 @@ def convert_dictionary_into_vector(word2vec_model,original_dictionary):
 	for word in original_dictionary:
 		if word in word2vec_model.vocab:
 			temp_vec = word2vec_model[word]
-			temp_vector_list.append(temp_vec)
+			temp_vector_dictionary.update({word:temp_vec})
 			temp_filter_word.add(word)
 		# else:
 		# 	print word
-	return temp_vector_list,temp_filter_word
+	return temp_vector_dictionary,temp_filter_word
 
 
 ###############################################################################################################################################
@@ -104,9 +115,9 @@ def wordnet_sort(word_set):
 					minimum_word = temp_word
 					count += 1
 		if minimum_word != '':
-			print word
-			print minimum_path
-			print "\n"
+			# print word
+			# print minimum_path
+			# print "\n"
 			# test_list.add(word)
 			path_dict.update({word:minimum_path})
 
@@ -125,9 +136,12 @@ def dictionary_filter(sorted_x,default_number_of_word):
 
 	current_distance = 0
 
+	manually_set = ['handel','then']
+
 	for pair in sorted_x:
 		if len(top_rank_list) < default_number_of_word :
-			top_rank_list.append(pair[0])
+			if pair[0] not in manually_set:
+				top_rank_list.append(pair[0])
 		# if len(top_rank_list) == default_number_of_word and current_distance == pair[1]:
 		# 	top_rank_list.append(pair[0])
 		current_distance = pair[1]
@@ -175,42 +189,89 @@ def visualize_vector(top_rank_list,word2vec_model):
 	plt.show()
 
 ###############################################################################################################################################
+# Calculate and sort all word in dictionary with the represented word
+def calculate_similarity_and_sort(top_rank_list,word_vector_dictionary):
+
+	dict_word_count = 0
+	sorted_word_dict = dict()
+
+	for key,value in word_vector_dictionary.items():
+# if not the repesented word
+		if key not in top_rank_list:
+# create a rank list to store all distance between current word and each representd word
+			rank_list = dict()
+			for import_word in top_rank_list:
+# calculate the L2 distance
+				dst = distance.euclidean(value,word_vector_dictionary[import_word])
+# store represented word : distance pair into the rank list dictionary
+				rank_list.update({import_word:dst})
+# sort rank list based on the distancer	
+			rank_list=OrderedDict(sorted(rank_list.items(),key=lambda t:t[1]))
+			represented_word = list(rank_list)[:1]
+			sorted_word_dict.update({key:represented_word})
+			dict_word_count += 1
+		print "Process word:",dict_word_count
+
+	pickle.dump(sorted_word_dict, open('./represented_word_corresponding_relationship.pkl','wb'))
+			
+	return sorted_word_dict
+
+
+###############################################################################################################################################
 # run four separate parts
 def run(train_dataset_path,google_pre_trained_word2vec_model_path):
+	default_mode = 'load'
 
-	train_dataset_set = set()
+	if default_mode == 'train':
 
-	train_dataset_set = from_list_into_set(train_dataset_path)
+		train_dataset_set = set()
 
-	default_number_of_word = 1000 
+		train_dataset_set = from_list_into_set(train_dataset_path)
 
-	print "The size of the train dataset is :",len(train_dataset_set)
+		default_number_of_word = 1000 
 
-	print "Load Google pre-trained word2vec model"
-	word2vec_model = load_pre_trained_word2vec_model(google_pre_trained_word2vec_model_path)
-	print "Load finish"
+		print "The size of the train dataset is :",len(train_dataset_set),"\n"
 
-	print "Convert dictionary into vector"
-	# word_vector_dictionary = dict()
-	word_vector_dictionary,word_set = convert_dictionary_into_vector(word2vec_model,train_dataset_set)
-	print "Convert finish"
+		print "Load Google pre-trained word2vec model"
+		word2vec_model = load_pre_trained_word2vec_model(google_pre_trained_word2vec_model_path)
+		print "Load finish\n"
 
-	print "The size of the word vector dictionary is :",len(word_vector_dictionary)
-	print "The size of the word set is :",len(word_set)
+		print "Convert dictionary into vector"
+		# word_vector_dictionary = dict()
+		word_vector_dictionary,word_set = convert_dictionary_into_vector(word2vec_model,train_dataset_set)
+		print "Convert finish\n"
 
-	print "Start wordnet processing"
-	sorted_word_dict = wordnet_sort(word_set)
-	print "Wordnet finish"
+		print "The size of the word vector dictionary is :",len(word_vector_dictionary)
+		print "The size of the word set is :",len(word_set),"\n"
 
-	print "Get default number of word"
-	top_rank_list = dictionary_filter(sorted_word_dict,default_number_of_word)
-	print "Wordnet finish"
+		print "Start wordnet processing"
+		sorted_word_dict = wordnet_sort(word_set)
+		print "Wordnet finish\n"
 
-	#print resutl_list
+		print "Get default number of word"
+		top_rank_list = dictionary_filter(sorted_word_dict,default_number_of_word)
+		print "Wordnet finish\n"
 
-	print "Start vector visualization"
-	visualize_vector(top_rank_list,word2vec_model)
-	print "Visualizaiton finish"
+		# print "Start vector visualization"
+		# visualize_vector(top_rank_list,word2vec_model)
+		# print "Visualizaiton finish"
+
+		print "Calculate and sort all word in dictionary"
+		sorted_word_dict = calculate_similarity_and_sort(top_rank_list,word_vector_dictionary)
+		print "Calculate and sort finish\n"
+
+		print "The size of the sorted word dictionary is :",len(sorted_word_dict),"\n"
+
+	if default_mode == 'load':
+
+		temp_dict = dict()
+		temp_dict = load_pickle_dict("./represented_word_corresponding_relationship.pkl")
+
+		for key,value in temp_dict.items():
+			print(key,value)
+
+		print "The size of the sorted word dictionary is :",len(temp_dict),"\n"
+
 
 ###############################################################################################################################################
 if __name__ == '__main__':
