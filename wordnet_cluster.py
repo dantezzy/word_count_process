@@ -102,24 +102,25 @@ def wordnet_sort(word_set):
 		temp_list = wn.synsets(word)
 # iterate all synset word in the synsets list
 		minimum_path = 9223372036854775807
+		maximum_path = -9223372036854775807
 		minimum_word = ''
 		for elem in temp_list:
 # use int max initialize minimum path 
-			temp_word = str(elem)[8:-2]
+			temp_word = str(elem)[8:-2] ## shoule be "str(elem)[8:-2]" # wordnet: "temp_word = str(elem)"
 			if temp_word.find(word) != -1 and '.n.' in temp_word: # noum and contain its own meaning
 # get the path from this word to wordnet root
 				temp = list(elem.closure(hyper))
 				length = len(temp)
 				if length != 0 and length < minimum_path:
 					minimum_path = length
-					minimum_word = temp_word
+					minimum_word = temp_word ### should be "minimum_word = temp_word" # wordnet: "minimum_word = temp_word"
 					count += 1
 		if minimum_word != '':
 			# print word
 			# print minimum_path
 			# print "\n"
 			# test_list.add(word)
-			path_dict.update({word:minimum_path})
+			path_dict.update({word:minimum_path}) # should be "path_dict.update({word:minimum_path})" # wordnet: "path_dict.update({minimum_word:minimum_path})"
 
 	# print "Total number is :",len(test_list)
 	# print "Total number is :",len(path_dict)
@@ -136,11 +137,11 @@ def dictionary_filter(sorted_x,default_number_of_word):
 
 	current_distance = 0
 
-	manually_set = ['handel','then']
+	manually_set = ['handel','then','jabberwocky','batiste','maxwell','camorra','ido','drey']
 
 	for pair in sorted_x:
 		if len(top_rank_list) < default_number_of_word :
-			if pair[0] not in manually_set:
+			if pair[0] not in manually_set: #should be "if pair[0] not in manually_set:" # wordnet:"str(pair[0])[8:-2] not in manually_set:""
 				top_rank_list.append(pair[0])
 		# if len(top_rank_list) == default_number_of_word and current_distance == pair[1]:
 		# 	top_rank_list.append(pair[0])
@@ -152,40 +153,63 @@ def dictionary_filter(sorted_x,default_number_of_word):
 
 ###############################################################################################################################################
 # vector visualizaiton
-def visualize_vector(top_rank_list,word2vec_model):
+def visualize_vector(top_rank_list,word2vec_model,word_set):
 
-	word_vector = list()
+	key_word_vector = list()
+	normal_word_vector = list()
 
-	for word in top_rank_list:
-		temp_vec = word2vec_model[word]
-		word_vector.append(temp_vec)
+	for key_word in top_rank_list:
+		key_temp_vec = word2vec_model[key_word]
+		key_word_vector.append(key_temp_vec)
 
-	np_word_vector_dictionary = np.array(word_vector)
+	for normal_word in word_set:
+		if normal_word not in top_rank_list:
+			normal_temp_vec = word2vec_model[normal_word]
+			normal_word_vector.append(normal_temp_vec)
+
+	np_key_word_vector_dictionary = np.array(key_word_vector)
+	np_normal_word_vector_dictionary = np.array(normal_word_vector)
 	pca = PCA(n_components=2)
-	newData = pca.fit_transform(np_word_vector_dictionary)
+	key_newData = pca.fit_transform(np_key_word_vector_dictionary)
+	normal_newData = pca.fit_transform(np_normal_word_vector_dictionary)
 	#print newData
 	# print len(newData)
-	x = list()
-	y = list()
-	z = list()
-	for vector in newData:
-		x.append(vector[0]*100)
-		y.append(vector[1]*100)
+	key_x = list()
+	key_y = list()
+	key_z = list()
+	for key_vector in key_newData:
+		key_x.append(key_vector[0]*100)
+		key_y.append(key_vector[1]*100)
 		# z.append(vector[2]*100)
 	# x = newData[:0]
 	# y = newData[:1]
 	# z = newData[:2]
-	np_x = np.array(x)
-	np_y = np.array(y)
+	key_np_x = np.array(key_x)
+	key_np_y = np.array(key_y)
 	# np_z = np.array(z)
 
 	#print np_z
+
+	normal_x = list()
+	normal_y = list()
+	normal_z = list()
+	for normal_vector in normal_newData:
+		normal_x.append(normal_vector[0]*100)
+		normal_y.append(normal_vector[1]*100)
+		# z.append(vector[2]*100)
+	# x = newData[:0]
+	# y = newData[:1]
+	# z = newData[:2]
+	normal_np_x = np.array(normal_x)
+	normal_np_y = np.array(normal_y)
+	# np_z = np.array(z)
 
 	fig = plt.figure()
 	# ax = fig.add_subplot(111, projection='3d')
 	ax = fig.add_subplot(1, 1, 1)
 	# ax.scatter(np_x, np_y,np_z)
-	plt.scatter(np_x, np_y)
+	#plt.scatter(normal_np_x, normal_np_y,color='blue')
+	plt.scatter(key_np_x, key_np_y,color='blue')
 	plt.show()
 
 ###############################################################################################################################################
@@ -202,11 +226,13 @@ def calculate_similarity_and_sort(top_rank_list,word_vector_dictionary):
 			rank_list = dict()
 			for import_word in top_rank_list:
 # calculate the L2 distance
-				dst = distance.euclidean(value,word_vector_dictionary[import_word])
-# store represented word : distance pair into the rank list dictionary
+				dst = distance.euclidean(value,word_vector_dictionary[import_word]) # word2vec based similarity calculation
+				# dst = wordnet_similarity(key,import_word)
+# store represented word : distance pair into the rank list dictionary # wordnet based similarity calculation
 				rank_list.update({import_word:dst})
 # sort rank list based on the distancer	
-			rank_list=OrderedDict(sorted(rank_list.items(),key=lambda t:t[1]))
+			rank_list=OrderedDict(sorted(rank_list.items(),key=lambda t:t[1], reverse=True)) # "reverse=True" only suitable for wordnet similarity
+			# print rank_list
 			represented_word = list(rank_list)[:1]
 			sorted_word_dict.update({key:represented_word})
 			dict_word_count += 1
@@ -218,9 +244,39 @@ def calculate_similarity_and_sort(top_rank_list,word_vector_dictionary):
 
 
 ###############################################################################################################################################
+# Calculate and sort all word in dictionary with the represented word
+def wordnet_similarity(dictionary_word,import_word):
+
+	temp_list = list()
+# generate all synsets for this word
+	temp_list = wn.synsets(dictionary_word)
+# iterate all synset word in the synsets list
+	minimum_path = 9223372036854775807
+	maximum_path = -9223372036854775807
+	minimum_word = ''
+	for elem in temp_list:
+# use int max initialize minimum path 
+		temp_word = str(elem)[8:-2] ## shoule be "str(elem)[8:-2]"
+		if temp_word.find(dictionary_word) != -1: # noum and contain its own meaning #"and '.n.' in temp_word"
+# get the path from this word to wordnet root
+			#temp = list(elem.closure(hyper))
+			length = wn.synset(temp_word).path_similarity(wn.synset(str(import_word)[8:-2]))
+			if length !="None" and length < minimum_path:
+				minimum_path = length
+
+
+	if minimum_path == None:
+		minimum_path = 0
+	if minimum_path == 9223372036854775807:
+		minimum_path = 0
+
+	return minimum_path
+
+
+###############################################################################################################################################
 # run four separate parts
 def run(train_dataset_path,google_pre_trained_word2vec_model_path):
-	default_mode = 'load'
+	default_mode = 'train'
 
 	if default_mode == 'train':
 
@@ -251,10 +307,12 @@ def run(train_dataset_path,google_pre_trained_word2vec_model_path):
 		print "Get default number of word"
 		top_rank_list = dictionary_filter(sorted_word_dict,default_number_of_word)
 		print "Wordnet finish\n"
+		# for word in top_rank_list:
+		# 	print word
 
-		# print "Start vector visualization"
-		# visualize_vector(top_rank_list,word2vec_model)
-		# print "Visualizaiton finish"
+		print "Start vector visualization"
+		visualize_vector(top_rank_list,word2vec_model,word_set)
+		print "Visualizaiton finish"
 
 		print "Calculate and sort all word in dictionary"
 		sorted_word_dict = calculate_similarity_and_sort(top_rank_list,word_vector_dictionary)
@@ -265,10 +323,18 @@ def run(train_dataset_path,google_pre_trained_word2vec_model_path):
 	if default_mode == 'load':
 
 		temp_dict = dict()
+		temp = set()
 		temp_dict = load_pickle_dict("./represented_word_corresponding_relationship.pkl")
 
 		for key,value in temp_dict.items():
 			print(key,value)
+			temp.update(value)
+		#print temp
+		outputFile = open('./wordnet.txt', 'w')
+
+		for key,value in temp_dict.items():
+			temp = '(\'' + str(key) + '\',[' + str(value)[9:-9] + '\''+'])'+'\n'
+			outputFile.write(temp)
 
 		print "The size of the sorted word dictionary is :",len(temp_dict),"\n"
 
