@@ -19,6 +19,7 @@ from multiprocessing import Process, Lock, Manager
 # PCA decomposition
 from sklearn.decomposition import PCA
 # 3D plot
+import pylab as pl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 # calculate distance
@@ -111,8 +112,8 @@ def wordnet_sort(word_set):
 # get the path from this word to wordnet root
 				temp = list(elem.closure(hyper))
 				length = len(temp)
-				if length != 0 and length < minimum_path:
-					minimum_path = length
+				if length != 0 and length > maximum_path:
+					maximum_path = length
 					minimum_word = temp_word ### should be "minimum_word = temp_word" # wordnet: "minimum_word = temp_word"
 					count += 1
 		if minimum_word != '':
@@ -120,7 +121,7 @@ def wordnet_sort(word_set):
 			# print minimum_path
 			# print "\n"
 			# test_list.add(word)
-			path_dict.update({word:minimum_path}) # should be "path_dict.update({word:minimum_path})" # wordnet: "path_dict.update({minimum_word:minimum_path})"
+			path_dict.update({word:maximum_path}) # should be "path_dict.update({word:minimum_path})" # wordnet: "path_dict.update({minimum_word:minimum_path})"
 
 	# print "Total number is :",len(test_list)
 	# print "Total number is :",len(path_dict)
@@ -134,22 +135,25 @@ def wordnet_sort(word_set):
 def dictionary_filter(sorted_x,default_number_of_word):
 
 	top_rank_list = list()
+	distribution_dict = dict()
 
 	current_distance = 0
 
-	manually_set = ['handel','then','jabberwocky','batiste','maxwell','camorra','ido','drey']
+	manually_set = ['handel','then','jabberwocky','batiste','maxwell','camorra','ido','drey','neve',
+	                'bengali','n','ro','s','varna','alabama','weber','wagner','en','tammy','mackintosh','frankenstein']
 
 	for pair in sorted_x:
 		if len(top_rank_list) < default_number_of_word :
 			if pair[0] not in manually_set: #should be "if pair[0] not in manually_set:" # wordnet:"str(pair[0])[8:-2] not in manually_set:""
 				top_rank_list.append(pair[0])
+				distribution_dict.update({pair[0]:0})
 		# if len(top_rank_list) == default_number_of_word and current_distance == pair[1]:
 		# 	top_rank_list.append(pair[0])
 		current_distance = pair[1]
 
 	print "The length of list :",len(top_rank_list)
 
-	return top_rank_list
+	return top_rank_list,distribution_dict
 
 ###############################################################################################################################################
 # vector visualizaiton
@@ -214,10 +218,12 @@ def visualize_vector(top_rank_list,word2vec_model,word_set):
 
 ###############################################################################################################################################
 # Calculate and sort all word in dictionary with the represented word
-def calculate_similarity_and_sort(top_rank_list,word_vector_dictionary):
+def calculate_similarity_and_sort(top_rank_list,word_vector_dictionary,distribution_dict):
 
 	dict_word_count = 0
 	sorted_word_dict = dict()
+	distribution = dict()
+	distribution = distribution_dict.copy()
 
 	for key,value in word_vector_dictionary.items():
 # if not the repesented word
@@ -231,16 +237,19 @@ def calculate_similarity_and_sort(top_rank_list,word_vector_dictionary):
 # store represented word : distance pair into the rank list dictionary # wordnet based similarity calculation
 				rank_list.update({import_word:dst})
 # sort rank list based on the distancer	
-			rank_list=OrderedDict(sorted(rank_list.items(),key=lambda t:t[1], reverse=True)) # "reverse=True" only suitable for wordnet similarity
+			rank_list=OrderedDict(sorted(rank_list.items(),key=lambda t:t[1], reverse=False)) # "reverse=True" only suitable for wordnet similarity
 			# print rank_list
 			represented_word = list(rank_list)[:1]
-			sorted_word_dict.update({key:represented_word})
+			sorted_word_dict.update({key:represented_word[0]})
+			# print represented_word[0]
+			distribution[represented_word[0]] += 1
 			dict_word_count += 1
 		print "Process word:",dict_word_count
 
 	pickle.dump(sorted_word_dict, open('./represented_word_corresponding_relationship.pkl','wb'))
-			
-	return sorted_word_dict
+
+
+	return sorted_word_dict,distribution
 
 
 ###############################################################################################################################################
@@ -305,20 +314,40 @@ def run(train_dataset_path,google_pre_trained_word2vec_model_path):
 		print "Wordnet finish\n"
 
 		print "Get default number of word"
-		top_rank_list = dictionary_filter(sorted_word_dict,default_number_of_word)
+		top_rank_list,distribution_dict = dictionary_filter(sorted_word_dict,default_number_of_word)
 		print "Wordnet finish\n"
 		# for word in top_rank_list:
 		# 	print word
 
+		# for key,value in distribution_dict.items():
+		# 	print(key,value)
+
 		print "Start vector visualization"
-		visualize_vector(top_rank_list,word2vec_model,word_set)
+		# visualize_vector(top_rank_list,word2vec_model,word_set)
 		print "Visualizaiton finish"
 
 		print "Calculate and sort all word in dictionary"
-		sorted_word_dict = calculate_similarity_and_sort(top_rank_list,word_vector_dictionary)
+		sorted_word_dict,word_dictribution = calculate_similarity_and_sort(top_rank_list,word_vector_dictionary,distribution_dict)
 		print "Calculate and sort finish\n"
 
 		print "The size of the sorted word dictionary is :",len(sorted_word_dict),"\n"
+
+		word_dictribution=OrderedDict(sorted(word_dictribution.items(),key=lambda t:t[1], reverse=True))
+		outputFile = open('./represented_distribution.txt', 'w')
+		pickle.dump(word_dictribution, open('./represented_distribution.pkl','wb'))
+
+		for key,value in word_dictribution.items():
+			print(key,value)
+			temp = '(\'' + str(key) + '\',' + str(value) + '\''+')'+'\n'
+			outputFile.write(temp)
+
+		# X = np.arange(len(word_dictribution))
+		# pl.bar(X, word_dictribution.values(), align='center', width=0.5)
+		# pl.xticks(X, word_dictribution.keys())
+		# ymax = max(word_dictribution.values()) + 1
+		# pl.ylim(0, ymax)
+		# pl.show()
+	
 
 	if default_mode == 'load':
 
@@ -330,11 +359,11 @@ def run(train_dataset_path,google_pre_trained_word2vec_model_path):
 			print(key,value)
 			temp.update(value)
 		#print temp
-		outputFile = open('./wordnet.txt', 'w')
+		# outputFile = open('./wordnet.txt', 'w')
 
-		for key,value in temp_dict.items():
-			temp = '(\'' + str(key) + '\',[' + str(value)[9:-9] + '\''+'])'+'\n'
-			outputFile.write(temp)
+		# for key,value in temp_dict.items():
+		# 	temp = '(\'' + str(key) + '\',[' + str(value)[9:-9] + '\''+'])'+'\n'
+		# 	outputFile.write(temp)
 
 		print "The size of the sorted word dictionary is :",len(temp_dict),"\n"
 
