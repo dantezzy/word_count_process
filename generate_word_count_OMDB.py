@@ -42,6 +42,54 @@ def load_pickle_dict(path):
 	return group_dict
 
 ###############################################################################################################################################
+# single process convert real word into  group word
+def single_process_group_word_converter(dataset,group_word_collection,start,end,word_dict):
+
+	for index in xrange(start,end):
+# iterate each word pair in training dictionary
+		for word_pair in dataset[index]:
+			group1 = ''
+			group2 = ''
+# iterate each word group in represented word relationships
+			for index,group_word in group_dict.items():
+# if a word in specific word group
+				if word[0] in group_word:
+					group1 = index
+				if word[1] in group_word:
+					group2 = index
+
+		group_word_collection.update({group_word_collection:group_word_collection})
+
+###############################################################################################################################################
+# multi process convert real word into  group word
+def multi_process_group_word_converter(dataset,number_of_process,group_dict):
+
+	manager = Manager()
+	group_word_collection = manager.list()
+	segment = len(dataset)/number_of_process
+	word_count_list = list()
+
+	all_processes = [Process(target=single_process_word_count, args=(dataset, group_word_collection,x*segment, (x+1)*segment,word_dict)) for x in xrange(0,number_of_process)]
+
+	for p in all_processes:
+		p.start()
+
+	P_last=Process(target=single_process_word_count, args=(dataset, group_word_collection,number_of_process*segment, len(dataset),word_dict))
+	if number_of_process*segment < len(dataset):
+		P_last.start()
+
+	for p in all_processes:
+		  p.join()
+
+	if number_of_process*segment < len(dataset):
+		P_last.join()
+
+	# for key, elem in word_pair_collection_dict.items():
+	# 	word_count_list.append(elem)
+
+	return group_word_collection
+
+###############################################################################################################################################
 # load the test document from pickle file
 def convert_worddict_to_groupdict(train_dictionary):
 
@@ -61,8 +109,6 @@ def convert_worddict_to_groupdict(train_dictionary):
 		print "process word pair:", count
 		count += 1
 	print train_dictionary
-
-
 
 ###############################################################################################################################################
 # single process parser
