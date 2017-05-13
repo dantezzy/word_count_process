@@ -43,22 +43,25 @@ def load_pickle_dict(path):
 
 ###############################################################################################################################################
 # single process convert real word into  group word
-def single_process_group_word_converter(dataset,group_word_collection,start,end,word_dict):
+def single_process_group_word_converter(dataset,group_word_collection,start,end,group_dict):
 
-	for index in xrange(start,end):
+	for word_pair_index in xrange(start,end):
 # iterate each word pair in training dictionary
-		for word_pair in dataset[index]:
-			group1 = ''
-			group2 = ''
+		group1 = ''
+		group2 = ''
 # iterate each word group in represented word relationships
-			for index,group_word in group_dict.items():
+		for index,group_word in group_dict.items():
 # if a word in specific word group
-				if word[0] in group_word:
-					group1 = index
-				if word[1] in group_word:
-					group2 = index
+			if dataset[word_pair_index][0] in group_word:
+				group1 = index
+			if dataset[word_pair_index][1] in group_word:
+				group2 = index
+		pair = list()
+		pair.append(group1)
+		pair.append(group2)
+		print "Process word pair:",word_pair_index
 
-		group_word_collection.update({group_word_collection:group_word_collection})
+		group_word_collection.append(pair)
 
 ###############################################################################################################################################
 # multi process convert real word into  group word
@@ -67,14 +70,13 @@ def multi_process_group_word_converter(dataset,number_of_process,group_dict):
 	manager = Manager()
 	group_word_collection = manager.list()
 	segment = len(dataset)/number_of_process
-	word_count_list = list()
 
-	all_processes = [Process(target=single_process_word_count, args=(dataset, group_word_collection,x*segment, (x+1)*segment,word_dict)) for x in xrange(0,number_of_process)]
+	all_processes = [Process(target=single_process_group_word_converter, args=(dataset, group_word_collection,x*segment, (x+1)*segment,group_dict)) for x in xrange(0,number_of_process)]
 
 	for p in all_processes:
 		p.start()
 
-	P_last=Process(target=single_process_word_count, args=(dataset, group_word_collection,number_of_process*segment, len(dataset),word_dict))
+	P_last=Process(target=single_process_group_word_converter, args=(dataset, group_word_collection,number_of_process*segment, len(dataset),group_dict))
 	if number_of_process*segment < len(dataset):
 		P_last.start()
 
@@ -83,9 +85,6 @@ def multi_process_group_word_converter(dataset,number_of_process,group_dict):
 
 	if number_of_process*segment < len(dataset):
 		P_last.join()
-
-	# for key, elem in word_pair_collection_dict.items():
-	# 	word_count_list.append(elem)
 
 	return group_word_collection
 
@@ -163,8 +162,10 @@ def multi_process_word_count(dataset,number_of_process,word_dict):
 # run separate parts
 def run(train_dataset_pickle_path,train_dictionary_pickle_path,test_dataset_pickle_path):
 
+	group_dict = load_pickle_dict("./represented_word_corresponding_relationship.pkl")
+
 	train_dictionary = load_pickle(train_dictionary_pickle_path)
-	convert_worddict_to_groupdict(train_dictionary)
+	train_dataset_word_count_list = multi_process_group_word_converter(train_dictionary,8,group_dict)
 	# train_dataset = load_pickle(train_dataset_pickle_path)
 
 	# test_dataset = load_pickle(test_dataset_pickle_path)
