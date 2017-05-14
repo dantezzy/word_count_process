@@ -89,27 +89,6 @@ def multi_process_group_word_converter(dataset,number_of_process,group_dict):
 	return group_word_collection
 
 ###############################################################################################################################################
-# load the test document from pickle file
-def convert_worddict_to_groupdict(train_dictionary):
-
-	group_dict = load_pickle_dict("./represented_word_corresponding_relationship.pkl")
-	print "The size of the real word dictionary is:",len(train_dictionary)
-	count = 1
-	#print train_dictionary
-# iterate each word pair in training dictionary
-	for word_pair in train_dictionary:
-# iterate each word in each word pair
-		for word in word_pair:
-# iterate each word group in represented word relationships
-			for index,group_word in group_dict.items():
-# if a word in specific word group
-				if word in group_word:
-					word.replace(word,index)
-		print "process word pair:", count
-		count += 1
-	print train_dictionary
-
-###############################################################################################################################################
 # single process parser
 def single_process_word_count(dataset,word_pair_collection,start,end,word_dict):
 
@@ -162,10 +141,24 @@ def multi_process_word_count(dataset,number_of_process,word_dict):
 # run separate parts
 def run(train_dataset_pickle_path,train_dictionary_pickle_path,test_dataset_pickle_path):
 
-	group_dict = load_pickle_dict("./represented_word_corresponding_relationship.pkl")
+	group_dict = load_pickle_dict("./group_dictionary.pkl")
+	# for key,value in group_dict.items():
+	# 	print (key,value)
 
+# process dictionary, convert real word into group index and remove duplicate
 	train_dictionary = load_pickle(train_dictionary_pickle_path)
-	train_dataset_word_count_list = multi_process_group_word_converter(train_dictionary,8,group_dict)
+	group_word_dictionary = multi_process_group_word_converter(train_dictionary,8,group_dict)
+	print "The length of original dict is:",len(train_dictionary)
+	print "The length of group dict is:",len(group_word_dictionary)
+	group_word_dictionary.sort()
+	group_word_dictionary_without_duplicate = list(group_word_dictionary for group_word_dictionary,_ in itertools.groupby(group_word_dictionary))
+	print group_word_dictionary_without_duplicate
+	print "The length of group dict set is:",len(group_word_dictionary_without_duplicate)
+  	with open('./group_word_dictionary.pkl','w') as f:
+	    pickle.dump(group_word_dictionary_without_duplicate,f)
+######################################################################################################################
+
+
 	# train_dataset = load_pickle(train_dataset_pickle_path)
 
 	# test_dataset = load_pickle(test_dataset_pickle_path)
